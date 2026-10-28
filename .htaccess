@@ -1,0 +1,7 @@
+Options +Indexes
+
+# BEGIN InfinityFree Managed Code
+# DO NOT EDIT - MANAGED BY THE MEMBERS AREA
+php_value display_errors On
+php_value date.timezone Asia/Manila
+# END InfinityFree Managed Code
