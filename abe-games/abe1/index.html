@@ -1,0 +1,281 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">	
+		<style>
+			html, body {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+				height: 100%;
+				width: 100%;
+				background: #121212;
+				font-family: system-ui, -apple-system, sans-serif;
+			}
+			canvas { display: block; }
+			
+			#ui-layer {
+				position: absolute;
+				top: 10px;
+				left: 10px;
+				right: 10px;
+				max-width: 280px;
+				z-index: 100;
+				background: rgba(255, 255, 255, 0.95);
+				padding: 12px;
+				border-radius: 8px;
+				box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+
+			.control-group {
+				display: flex;
+				flex-direction: column;
+			}
+
+			label { 
+				font-weight: bold; 
+				font-size: 11px; 
+				color: #333; 
+				margin-bottom: 4px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+
+			input[type="file"] { font-size: 12px; width: 100%; }
+			input[type="range"] { width: 100%; cursor: pointer; }
+
+			@media (max-width: 400px) {
+				#ui-layer { padding: 8px; gap: 6px; }
+				label { font-size: 10px; }
+			}
+		</style>
+	</head>
+	<body>
+		<div id="ui-layer">
+			<div class="control-group">
+				<label>Image Source</label>
+				<input type="file" id="fileInput" accept="image/*">
+			</div>
+			<div class="control-group">
+				<label id="gridLabel">Grid: 3 x 3</label>
+				<input type="range" id="gridSlider" min="2" max="10" value="3" step="1">
+			</div>
+		</div>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+
+		<script>
+let img;
+let tiles = [];
+let gridSize = 3;
+let tileSize;
+let emptyPos = { x: 2, y: 2 };
+let isImageLoaded = false;
+let solved = false;
+let particles = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  
+  const fileInput = document.getElementById('fileInput');
+  fileInput.addEventListener('change', handleFileSelection);
+
+  const gridSlider = document.getElementById('gridSlider');
+  const gridLabel = document.getElementById('gridLabel');
+  
+  // Update label while sliding
+  gridSlider.addEventListener('input', (e) => {
+    gridLabel.innerText = `Grid: ${e.target.value} x ${e.target.value}`;
+  });
+
+  // Re-init puzzle only when slider is released
+  gridSlider.addEventListener('change', (e) => {
+    gridSize = parseInt(e.target.value);
+    if (isImageLoaded) initPuzzle();
+  });
+
+  // Load default image
+  img = loadImage('abe.jpg', 
+    () => { 
+      isImageLoaded = true; 
+      initPuzzle(); 
+    }, 
+    () => { 
+      // Fallback if abe.jpg is missing
+      img = createImage(600, 600);
+      img.loadPixels();
+      for (let i = 0; i < img.pixels.length; i += 4) {
+        img.pixels[i] = 100; img.pixels[i+1] = 150; img.pixels[i+2] = 250; img.pixels[i+3] = 255;
+      }
+      img.updatePixels();
+      isImageLoaded = true;
+      initPuzzle();
+    }
+  );
+}
+
+function handleFileSelection(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      loadImage(event.target.result, (newImg) => {
+        img = newImg;
+        isImageLoaded = true;
+        initPuzzle();
+      });
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+function initPuzzle() {
+  tiles = [];
+  solved = false;
+  particles = [];
+  emptyPos = { x: gridSize - 1, y: gridSize - 1 };
+  
+  // Calculate tileSize based on 90% of the smallest screen dimension
+  tileSize = (min(width, height) * 0.9) / gridSize;
+
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (x === gridSize - 1 && y === gridSize - 1) continue;
+
+      let tileImg = img.get(
+        (x * img.width) / gridSize,
+        (y * img.height) / gridSize,
+        img.width / gridSize,
+        img.height / gridSize
+      );
+      
+      tiles.push({
+        img: tileImg,
+        origX: x, 
+        origY: y,
+        currentX: x,
+        currentY: y
+      });
+    }
+  }
+  shuffleTiles();
+}
+
+function shuffleTiles() {
+  let moves = gridSize * gridSize * 20; 
+  for (let i = 0; i < moves; i++) {
+    let neighbors = tiles.filter(t => abs(emptyPos.x - t.currentX) + abs(emptyPos.y - t.currentY) === 1);
+    let tileToMove = random(neighbors);
+    if (tileToMove) {
+      swapWithEmpty(tileToMove);
+    }
+  }
+}
+
+function swapWithEmpty(tile) {
+  let tempX = tile.currentX;
+  let tempY = tile.currentY;
+  tile.currentX = emptyPos.x;
+  tile.currentY = emptyPos.y;
+  emptyPos.x = tempX;
+  emptyPos.y = tempY;
+}
+
+function checkWin() {
+  for (let t of tiles) {
+    if (t.currentX !== t.origX || t.currentY !== t.origY) return false;
+  }
+  return true;
+}
+
+function draw() {
+  background(20);
+  if (!isImageLoaded) return;
+
+  let offsetX = (width - tileSize * gridSize) / 2;
+  let offsetY = (height - tileSize * gridSize) / 2;
+
+  for (let tile of tiles) {
+    image(tile.img, offsetX + tile.currentX * tileSize, offsetY + tile.currentY * tileSize, tileSize - 1, tileSize - 1);
+  }
+
+  if (solved) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      particles[i].update();
+      particles[i].show();
+      if (particles[i].finished()) particles.splice(i, 1);
+    }
+
+    textAlign(CENTER, CENTER);
+    textSize(min(width, height) * 0.08);
+    fill(255);
+    stroke(0);
+    strokeWeight(4);
+    text("COMPLETE!", width/2, height/2);
+    
+    if (frameCount % 2 === 0) {
+        for(let i=0; i<5; i++) particles.push(new Particle(random(width), height + 10));
+    }
+  }
+}
+
+function mousePressed() {
+  const ui = document.getElementById('ui-layer');
+  const uiRect = ui.getBoundingClientRect();
+
+  // Don't interact with puzzle if clicking the menu
+  if (mouseX >= uiRect.left && mouseX <= uiRect.right && 
+      mouseY >= uiRect.top && mouseY <= uiRect.bottom) {
+    return;
+  }
+
+  if (solved) return;
+
+  let offsetX = (width - tileSize * gridSize) / 2;
+  let offsetY = (height - tileSize * gridSize) / 2;
+  let x = floor((mouseX - offsetX) / tileSize);
+  let y = floor((mouseY - offsetY) / tileSize);
+
+  let clickedTile = tiles.find(t => t.currentX === x && t.currentY === y);
+
+  if (clickedTile && abs(emptyPos.x - x) + abs(emptyPos.y - y) === 1) {
+    swapWithEmpty(clickedTile);
+    if (checkWin()) {
+      solved = true;
+      for (let i = 0; i < 100; i++) particles.push(new Particle(width / 2, height / 2));
+    }
+  }
+}
+
+class Particle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = random(-5, 5);
+    this.vy = random(-15, -5);
+    this.alpha = 255;
+    this.color = color(random(255), random(255), random(255));
+  }
+  finished() { return this.alpha < 0; }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.2; 
+    this.alpha -= 3;
+  }
+  show() {
+    noStroke();
+    fill(this.color.levels[0], this.color.levels[1], this.color.levels[2], this.alpha);
+    ellipse(this.x, this.y, 8);
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  tileSize = (min(width, height) * 0.9) / gridSize;
+}
+		</script>
+	</body>
+</html>

@@ -1,0 +1,570 @@
+var palette = [
+  "#1a1c2c",
+  "#5d275d",
+  "#b13e53",
+  "#ef7d57",
+  "#ffcd75",
+  "#a7f070",
+  "#38b764",
+  "#257179",
+  "#29366f",
+  "#3b5dc9",
+  "#41a6f6",
+  "#73eff7",
+  "#f4f4f4",
+  "#94b0c2",
+  "#566c86",
+  "#333c57",
+];
+
+const GameState = {
+	INIT: 			"INIT",
+	START: 			"START",
+	SELECT:			"SELECT",
+	COMPLETE: 	"COMPLETE",
+	END: 				"END",
+};
+
+var gameState=GameState.SELECT;
+
+function inrect(x,y,rx,ry,rw,rh) {
+	return x>=rx && x<rx+rw && y>=ry && y<ry+rh;
+}
+
+function timer() {
+	if(!timerPause) {
+		elapsedTime++;
+		drawText(ctx,font,"TIME: "+String(elapsedTime).padStart(4),10*13+2,16*15+2,2);	
+	}
+}
+
+function movePlayer(dx,dy) {
+
+	ppx=player.x;
+	ppy=player.y;
+	cpx=player.x+dx;
+	cpy=player.y+dy;
+	npx=cpx+dx;
+	npy=cpy+dy;
+
+	if(level[ppy][ppx]=='@' && level[cpy][cpx]==' ') {
+		level[ppy][ppx]=' ';
+		level[cpy][cpx]='@';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,0);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,1);
+		player.x=cpx;
+		player.y=cpy;
+		player.moves++;
+	} else if(level[ppy][ppx]=='@' && level[cpy][cpx]=='.') {
+		level[ppy][ppx]=' ';
+		level[cpy][cpx]='+';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,0);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,2);
+		player.x=cpx;
+		player.y=cpy;		
+		player.moves++;
+	} else if(level[ppy][ppx]=='@' && level[cpy][cpx]=='$' && level[npy][npx]==' ') {
+		level[ppy][ppx]=' ';
+		level[cpy][cpx]='@';
+		level[npy][npx]='$';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,0);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,1);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,3);
+		player.x=cpx;
+		player.y=cpy;		
+		player.moves++;
+	} else if(level[ppy][ppx]=='@' && level[cpy][cpx]=='$' && level[npy][npx]=='.') {
+		level[ppy][ppx]=' ';
+		level[cpy][cpx]='@';
+		level[npy][npx]='*';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,0);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,1);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,4);
+		player.x=cpx;
+		player.y=cpy;		
+		player.goals--;
+		player.moves++;
+	} else if(level[ppy][ppx]=='@' && level[cpy][cpx]=='*' && level[npy][npx]==' ') {
+		level[ppy][ppx]=' ';
+		level[cpy][cpx]='+';
+		level[npy][npx]='$';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,0);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,2);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,3);
+		player.x=cpx;
+		player.y=cpy;		
+		player.goals++;
+		player.moves++;
+	} else if(level[ppy][ppx]=='@' && level[cpy][cpx]=='*' && level[npy][npx]=='.') {
+		level[ppy][ppx]=' ';
+		level[cpy][cpx]='+';
+		level[npy][npx]='*';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,0);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,2);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,4);
+		player.x=cpx;
+		player.y=cpy;		
+		player.moves++;
+	} else if(level[ppy][ppx]=='+' && level[cpy][cpx]==' ') {
+		level[ppy][ppx]='.';
+		level[cpy][cpx]='@';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,5);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,1);
+		player.x=cpx;
+		player.y=cpy;		
+		player.moves++;
+	} else if(level[ppy][ppx]=='+' && level[cpy][cpx]=='.') {
+		level[ppy][ppx]='.';
+		level[cpy][cpx]='+';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,5);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,2);
+		player.x=cpx;
+		player.y=cpy;		
+		player.moves++;
+	} else if(level[ppy][ppx]=='+' && level[cpy][cpx]=='$' && level[npy][npx]==' ') {
+		level[ppy][ppx]='.';
+		level[cpy][cpx]='@';
+		level[npy][npx]='$';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,5);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,1);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,3);
+		player.x=cpx;
+		player.y=cpy;		
+		player.moves++;
+	} else if(level[ppy][ppx]=='+' && level[cpy][cpx]=='$' && level[npy][npx]=='.') {
+		level[ppy][ppx]='.';
+		level[cpy][cpx]='@';
+		level[npy][npx]='*';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,5);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,1);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,4);
+		player.x=cpx;
+		player.y=cpy;		
+		player.goals--;
+		player.moves++;
+	} else if(level[ppy][ppx]=='+' && level[cpy][cpx]=='*' && level[npy][npx]==' ') {
+		level[ppy][ppx]='.';
+		level[cpy][cpx]='+';
+		level[npy][npx]='$';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,5);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,2);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,3);
+		player.x=cpx;
+		player.y=cpy;		
+		player.goals++;
+		player.moves++;
+	} else if(level[ppy][ppx]=='+' && level[cpy][cpx]=='*' && level[npy][npx]=='.') {
+		level[ppy][ppx]='.';
+		level[cpy][cpx]='+';
+		level[npy][npx]='*';
+		drawCanvas(ctx,sprites,ppx*16,ppy*16,1,5);
+		drawCanvas(ctx,sprites,cpx*16,cpy*16,1,2);
+		drawCanvas(ctx,sprites,npx*16,npy*16,1,4);
+		player.x=cpx;
+		player.y=cpy;		
+		player.moves++;
+	}
+
+	drawText(ctx,font,"GOALS:"+String(player.goals).padStart(4),2,16*14+2,2);
+	drawText(ctx,font,"MOVES:"+String(player.moves).padStart(4),2,16*15+2,2);
+
+	if(player.moves==1) {
+		elapsedTime=0;
+		timerPause=false;
+	}
+
+	if(player.goals==0) {
+		timerPause=true;
+		drawText(ctx,font,"COMPLETE  ",2,16*14+2,2);
+		gameState=GameState.COMPLETE;
+	}
+}
+
+var pointer={
+	x:0,
+	y:0,
+	isDown:false
+};
+
+class PointerHandler {
+	constructor(element) {
+		this.element = element;
+		this.isDragging = false;
+
+		// Bind methods to preserve 'this' context
+		this.onPointerDown = this.onPointerDown.bind(this);
+		this.onPointerMove = this.onPointerMove.bind(this);
+		this.onPointerUp = this.onPointerUp.bind(this);
+
+		// Attach listeners
+		this.element.addEventListener('pointerdown', this.onPointerDown);
+		window.addEventListener('pointermove', this.onPointerMove);
+		window.addEventListener('pointerup', this.onPointerUp);
+		window.addEventListener('pointercancel', this.onPointerUp);
+
+		// Prevent default touch behaviors like scrolling/zooming on the element
+		this.element.style.touchAction = 'none';
+	}
+
+	onPointerDown(event) {
+		this.isDragging = true;
+
+		// Capture pointer so we keep receiving events even if the cursor leaves the element
+		this.element.setPointerCapture(event.pointerId);
+
+		const coords = this.getCoordinates(event);
+
+		// TODO: Add your start/down logic here (e.g., store starting position)
+
+		pointer.x=coords.x;
+		pointer.y=coords.y;
+		pointer.isDown=true;
+
+		switch(gameState) {
+
+			case GameState.SELECT: 
+
+				if(inrect(pointer.x,pointer.y,  0,288,32,32)) {
+					if(currentLevel>0) currentLevel--;
+					drawLevel(ctx,levels[currentLevel],sprites,0,0,1);
+					drawText(ctx,font,"LEVEL:"+String(currentLevel+1).padStart(4),10*13+2,16*14+2,2);
+				}        
+
+				if(inrect(pointer.x,pointer.y, 64,288,32,32)) {
+					if(currentLevel<levels.length-1) currentLevel++;
+					drawLevel(ctx,levels[currentLevel],sprites,0,0,1);
+					drawText(ctx,font,"LEVEL:"+String(currentLevel+1).padStart(4),10*13+2,16*14+2,2);
+				}        
+
+				if(inrect(pointer.x,pointer.y,160,288,32,32)) {
+					init0();
+					gameState=GameState.START;					
+				}        
+
+				break;
+
+			case GameState.START: 
+
+				if(inrect(pointer.x,pointer.y, 32,256,32,32)) {
+					movePlayer( 0,-1);
+				}        
+
+				if(inrect(pointer.x,pointer.y, 64,288,32,32)) {
+					movePlayer( 1, 0);
+				}        
+
+				if(inrect(pointer.x,pointer.y, 32,320,32,32)) {
+					movePlayer( 0, 1);
+				}        
+
+				if(inrect(pointer.x,pointer.y,  0,288,32,32)) {
+					movePlayer(-1, 0);
+				}        
+
+				if(inrect(pointer.x,pointer.y,224,288,32,32)) {
+					init0();
+				}        
+
+				if(inrect(pointer.x,pointer.y,160,288,32,32)) {
+					init1();
+					gameState=GameState.SELECT;
+				}        
+
+				break;
+
+			case GameState.COMPLETE:
+
+				if(inrect(pointer.x,pointer.y,224,288,32,32)) {
+					init0();
+					gameState=GameState.START;
+				}        
+
+				if(inrect(pointer.x,pointer.y,160,288,32,32)) {
+					init1();
+					gameState=GameState.SELECT;
+				}        
+
+				break;
+		}
+
+	}
+
+	onPointerMove(event) {
+		if (!this.isDragging) return;
+
+		const coords = this.getCoordinates(event);
+
+		// TODO: Add your move/drag logic here (e.g., update element position)
+		pointer.x=coords.x;
+		pointer.y=coords.y;
+	}
+
+	onPointerUp(event) {
+		if (!this.isDragging) return;
+
+		this.isDragging = false;
+
+		try {
+			this.element.releasePointerCapture(event.pointerId);
+		} catch (e) {
+		// Ignore if pointer capture was already lost
+		}
+
+		const coords = this.getCoordinates(event);
+
+		// TODO: Add your end/release logic here
+		pointer.x=coords.x;
+		pointer.y=coords.y;
+		pointer.isDown=false;
+	}
+
+	getCoordinates(event) {
+		// Returns coordinates relative to the target element
+		const rect = this.element.getBoundingClientRect();
+		return {
+			x: event.clientX - rect.left,
+			y: event.clientY - rect.top,
+			clientX: event.clientX,
+			clientY: event.clientY
+		};
+	}
+
+	// Clean up event listeners if needed
+	destroy() {
+		this.element.removeEventListener('pointerdown', this.onPointerDown);
+		window.removeEventListener('pointermove', this.onPointerMove);
+		window.removeEventListener('pointerup', this.onPointerUp);
+		window.removeEventListener('pointercancel', this.onPointerUp);
+	}
+}
+
+function drawCanvas(ctx,cvs,x,y,s,f) {
+	var hex="0123456789ABCDEF";
+	for(var j=0;j<cvs.h;j++) {
+		for(var i=0;i<cvs.w;i++) {
+			var k=cvs.p[f][j][i];
+			var c=hex.indexOf(k);
+			if(c!=-1) {
+				ctx.fillStyle=palette[c];
+				ctx.fillRect(x+i*s,y+j*s,s,s);
+			}
+		}
+	}
+}
+
+function drawLevel(ctx,lvl,spr,x,y,s) {
+	var symbols=" @+$*.#";
+	for(var j=0;j<14;j++) {
+		for(var i=0;i<16;i++) {
+			var k=symbols.indexOf(lvl[j][i]);
+			drawCanvas(ctx,spr,i*16*s,j*16*s,s,k);
+		}
+	}
+
+	ctx.beginPath();
+	ctx.strokeStyle="#FFFFFF";
+	ctx.rect(0.5,0.5,256,256);
+	ctx.stroke();
+	ctx.closePath();	
+}
+
+function drawText(ctx,fnt,txt,x,y,s) {
+	var chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789[].:'";
+	var a=x,b=y;
+	for(var k=0;k<txt.length;k++) {
+		var l=chars.indexOf(txt[k]);
+		if(l!=-1) {
+			drawCanvas(ctx,fnt,a,b,s,l);
+			a+=(fnt.w+1)*s;
+			if(a+(fnt.w+1)*s>=canvas.width) {
+				a=0;
+				b+=(fnt.h+1)*s;
+			}
+		}		
+	}
+}
+
+function drawPad(ctx,pad) {
+	drawCanvas(ctx,pad, 32,256,2,0);
+	drawCanvas(ctx,pad, 64,288,2,1);
+	drawCanvas(ctx,pad, 32,320,2,2);
+	drawCanvas(ctx,pad,  0,288,2,3);
+
+	drawCanvas(ctx,pad,160,288,2,4);
+	drawCanvas(ctx,pad,224,288,2,5);
+/*
+	drawCanvas(ctx,pad,192,256,2,6);
+	drawCanvas(ctx,pad,192,320,2,7);
+*/
+}
+
+function clrscr(ctx) {
+	ctx.fillStyle=palette[0];
+	ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+// Disables right-click context menu on the entire website
+window.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
+});
+
+var canvas=document.getElementById("canvas");
+var ctx=canvas.getContext("2d");
+
+canvas.width = 256;
+canvas.height = 384;
+canvas.style.border = "1px solid white";
+
+var timerPause=true;
+var elapsedTime=0;
+var timerInterval=setInterval(timer,1000);
+
+var player={
+	x:0,
+	y:0,
+	moves:0,
+	goals:0,
+};
+
+var currentLevel=0;
+var level=[];
+
+function init0() { 
+	timerPause=true;
+	elapsedTime=0;
+
+	player.x=0;
+	player.y=0;
+	player.moves=0;
+	player.goals=0;
+
+	level=[];
+
+	var numBoxes=0;
+	var numGoals=0;
+	for(var j=0;j<levels[currentLevel].length;j++) {
+		level.push([])
+		for(var i=0;i<levels[currentLevel][j].length;i++) {
+			var c=levels[currentLevel][j][i];
+			level[j].push(c);
+			switch(c) {
+				case '@': player.x=i; player.y=j; break;
+				case '+': player.x=i; player.y=j; numGoals++; break;
+				case '$': numBoxes++; break;
+				case '.': numGoals++; break;
+			}
+		}
+	}
+
+	player.goals=Math.min(numBoxes,numGoals);
+
+	clrscr(ctx);
+	drawLevel(ctx,level,sprites,0,0,1);
+	drawPad(ctx,pad);
+	drawText(ctx,font,"GOALS:"+String(player.goals).padStart(4),2,16*14+2,2);
+	drawText(ctx,font,"MOVES:"+String(player.moves).padStart(4),2,16*15+2,2);
+	drawText(ctx,font,"LEVEL:"+String(currentLevel+1).padStart(4),10*13+2,16*14+2,2);
+	drawText(ctx,font,"TIME: "+String(elapsedTime).padStart(4),10*13+2,16*15+2,2);	drawText(ctx,font,"ABE'S BOX WORLD",(256-6*15*2)/2,16*23,2);
+}
+
+function init1() {
+	timerPause=true;
+	elapsedTime=0;
+
+	clrscr(ctx);
+	drawLevel(ctx,levels[currentLevel],sprites,0,0,1);
+	drawPad(ctx,pad);
+	drawText(ctx,font,"SELECT [X]",2,16*14+2,2);
+	drawText(ctx,font,"LEVEL:"+String(currentLevel+1).padStart(4),10*13+2,16*14+2,2);
+	drawText(ctx,font,"CHANGE [LEFT] [RIGHT]",2,16*15+2,2);
+	drawText(ctx,font,"ABE'S BOX WORLD",(256-6*15*2)/2,16*23,2);
+}
+
+init1();
+
+const handler = new PointerHandler(canvas);
+
+window.addEventListener('keydown', (event) => {
+    // Check if the pressed key is one of the arrow keys
+
+//		console.log(event.key);
+    
+    if ([	'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+					'X','x','Z','z','Enter'].includes(event.key)) {
+        event.preventDefault();
+        handleDirection(event.key);
+    }
+});
+
+function handleDirection(key) {
+
+	switch(gameState) {
+
+		case GameState.SELECT:
+
+	    switch (key) {
+        case 'ArrowLeft':
+					if(currentLevel>0) currentLevel--;
+					drawLevel(ctx,levels[currentLevel],sprites,0,0,1);
+					drawText(ctx,font,"LEVEL:"+String(currentLevel+1).padStart(4),10*13+2,16*14+2,2);
+					break;
+        case 'ArrowRight':
+					if(currentLevel<levels.length-1) currentLevel++;
+					drawLevel(ctx,levels[currentLevel],sprites,0,0,1);
+					drawText(ctx,font,"LEVEL:"+String(currentLevel+1).padStart(4),10*13+2,16*14+2,2);
+					break;
+				case 'Z':
+				case 'z':
+					init0();
+					gameState=GameState.START;					
+					break;
+			}
+
+			break;
+
+		case GameState.START:
+		
+	    switch (key) {
+        case 'ArrowUp':
+					// Move up
+					movePlayer( 0,-1);
+					break;
+	      case 'ArrowDown':
+					// Move down
+					movePlayer( 0, 1);
+					break;
+        case 'ArrowLeft':
+					// Move left
+					movePlayer(-1, 0);
+					break;
+        case 'ArrowRight':
+					// Move right
+					movePlayer( 1, 0);
+					break;
+        case 'X':
+        case 'x':
+        	init0();
+					break;
+				case 'Z':
+				case 'z':
+					init1();
+					gameState=GameState.SELECT;
+					break;
+  	  }
+  	  break;
+ 		case GameState.COMPLETE:
+	    switch (key) {
+        case 'X':
+        case 'x':
+        	init0();
+					gameState=GameState.START;
+					break;
+				case 'Z':
+				case 'z':
+					init1();
+					gameState=GameState.SELECT;
+					break;
+			}
+			break;
+	}
+}
