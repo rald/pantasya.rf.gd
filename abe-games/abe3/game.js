@@ -87,12 +87,57 @@ class PointerHandler {
 		pointer.isDown=false;
 	}
 
+/*
 	getCoordinates(event) {
 		// Returns coordinates relative to the target element
 		const rect = this.element.getBoundingClientRect();
 		return {
 			x: event.clientX - rect.left,
 			y: event.clientY - rect.top,
+			clientX: event.clientX,
+			clientY: event.clientY
+		};
+	}
+*/
+
+	getCoordinates(event) {
+		const rect = this.element.getBoundingClientRect();
+
+		// Internal canvas resolution
+		const internalWidth = this.element.width;   // 256
+		const internalHeight = this.element.height; // 384
+
+		// Aspect ratios
+		const internalAspect = internalWidth / internalHeight;
+		const rectAspect = rect.width / rect.height;
+
+		let renderWidth = rect.width;
+		let renderHeight = rect.height;
+		let offsetX = 0;
+		let offsetY = 0;
+
+		// Calculate actual rendered dimensions and offsets caused by object-fit: contain
+		if (rectAspect > internalAspect) {
+			// Pillarboxed (black bars on the left and right)
+			renderWidth = rect.height * internalAspect;
+			offsetX = (rect.width - renderWidth) / 2;
+		} else if (rectAspect < internalAspect) {
+			// Letterboxed (black bars on the top and bottom)
+			renderHeight = rect.width / internalAspect;
+			offsetY = (rect.height - renderHeight) / 2;
+		}
+
+		// Mouse position relative to the rendered canvas content area
+		const clientX = event.clientX - rect.left - offsetX;
+		const clientY = event.clientY - rect.top - offsetY;
+
+		// Scale down to internal 256x384 resolution
+		const scaleX = internalWidth / renderWidth;
+		const scaleY = internalHeight / renderHeight;
+
+		return {
+			x: clientX * scaleX,
+			y: clientY * scaleY,
 			clientX: event.clientX,
 			clientY: event.clientY
 		};
@@ -190,7 +235,7 @@ function drawPad(ctx,pad) {
 	drawCanvas(ctx,pad,192,320,2,7);
 */
 
-	drawBorder(ctx);
+//	drawBorder(ctx);
 
 	drawText(ctx,font,"ABE'S STAR WORLD",(canvas.width-16*12)/2,canvas.height-14,2);
 }
@@ -241,7 +286,7 @@ function hideLevelInfo(ctx) {
 }
 
 function showLevelInfo(ctx,lvl,font) {
-	drawText(ctx,font,"LEVEL: "+currentLevel.toString()+" STARS: "+lvl.stars.toString(),3,14*16,2);
+	drawText(ctx,font,"LEVEL: "+(currentLevel+1).toString()+" STARS: "+lvl.stars.toString(),3,14*16,2);
 }
 
 function drawLevel(ctx,lvl,spr,font) {
@@ -263,6 +308,7 @@ function drawLevel(ctx,lvl,spr,font) {
 	drawGrid(ctx,lvl.w,lvl.h,0,0,16,palette[1]);
 }
 
+/*
 function drawBorder(ctx) {
 	ctx.strokeStyle=palette[12];
 	ctx.strokeRect(0.5,0.5,256,256);
@@ -271,7 +317,9 @@ function drawBorder(ctx) {
 	ctx.strokeRect(0,0,canvas.width,canvas.height);
 	ctx.strokeRect(0,0,canvas.width,256);
 }
+*/
 
+/*
 function drawGrid(ctx,w,h,x,y,s,c) {
 	for(var i=0;i<=w;i++) {
 		ctx.beginPath();
@@ -290,6 +338,31 @@ function drawGrid(ctx,w,h,x,y,s,c) {
 		ctx.closePath();
 	}
 }
+*/
+
+function drawGrid(ctx,w,h,x,y,s,c) {
+	ctx.beginPath();
+	ctx.strokeStyle = c;
+	ctx.lineWidth = 1;
+
+	// Draw vertical grid lines
+	for(var i = 0; i <= w; i++) {
+		var px = Math.floor(x + i * s) + 0.5;
+		ctx.moveTo(px, Math.floor(y) + 0.5);
+		ctx.lineTo(px, Math.floor(y + h * s) + 0.5);
+	}
+
+	// Draw horizontal grid lines
+	for(var j = 0; j <= h; j++) {
+		var py = Math.floor(y + j * s) + 0.5;
+		ctx.moveTo(Math.floor(x) + 0.5, py);
+		ctx.lineTo(Math.floor(x + w * s) + 0.5, py);
+	}
+
+	ctx.stroke();
+	ctx.closePath();
+}
+
 
 function drawCode(ctx,code,spr,x,y,s) {
 

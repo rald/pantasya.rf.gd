@@ -318,12 +318,57 @@ class PointerHandler {
 		pointer.isDown=false;
 	}
 
+/*
 	getCoordinates(event) {
 		// Returns coordinates relative to the target element
 		const rect = this.element.getBoundingClientRect();
 		return {
 			x: event.clientX - rect.left,
 			y: event.clientY - rect.top,
+			clientX: event.clientX,
+			clientY: event.clientY
+		};
+	}
+*/
+
+	getCoordinates(event) {
+		const rect = this.element.getBoundingClientRect();
+
+		// Internal canvas resolution
+		const internalWidth = this.element.width;   // 256
+		const internalHeight = this.element.height; // 384
+
+		// Aspect ratios
+		const internalAspect = internalWidth / internalHeight;
+		const rectAspect = rect.width / rect.height;
+
+		let renderWidth = rect.width;
+		let renderHeight = rect.height;
+		let offsetX = 0;
+		let offsetY = 0;
+
+		// Calculate actual rendered dimensions and offsets caused by object-fit: contain
+		if (rectAspect > internalAspect) {
+			// Pillarboxed (black bars on the left and right)
+			renderWidth = rect.height * internalAspect;
+			offsetX = (rect.width - renderWidth) / 2;
+		} else if (rectAspect < internalAspect) {
+			// Letterboxed (black bars on the top and bottom)
+			renderHeight = rect.width / internalAspect;
+			offsetY = (rect.height - renderHeight) / 2;
+		}
+
+		// Mouse position relative to the rendered canvas content area
+		const clientX = event.clientX - rect.left - offsetX;
+		const clientY = event.clientY - rect.top - offsetY;
+
+		// Scale down to internal 256x384 resolution
+		const scaleX = internalWidth / renderWidth;
+		const scaleY = internalHeight / renderHeight;
+
+		return {
+			x: clientX * scaleX,
+			y: clientY * scaleY,
 			clientX: event.clientX,
 			clientY: event.clientY
 		};
@@ -361,12 +406,16 @@ function drawLevel(ctx,lvl,spr,x,y,s) {
 		}
 	}
 
+/*
 	ctx.beginPath();
 	ctx.strokeStyle="#FFFFFF";
 	ctx.rect(0.5,0.5,256,256);
 	ctx.stroke();
-	ctx.closePath();	
+	ctx.closePath();
+*/
+
 }
+
 
 function drawText(ctx,fnt,txt,x,y,s) {
 	var chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789[].:'";
@@ -380,7 +429,7 @@ function drawText(ctx,fnt,txt,x,y,s) {
 				a=0;
 				b+=(fnt.h+1)*s;
 			}
-		}		
+		}
 	}
 }
 
@@ -429,7 +478,7 @@ var player={
 var currentLevel=0;
 var level=[];
 
-function init0() { 
+function init0() {
 	timerPause=true;
 	elapsedTime=0;
 
@@ -488,7 +537,7 @@ window.addEventListener('keydown', (event) => {
     // Check if the pressed key is one of the arrow keys
 
 //		console.log(event.key);
-    
+
     if ([	'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
 					'X','x','Z','z','Enter'].includes(event.key)) {
         event.preventDefault();
